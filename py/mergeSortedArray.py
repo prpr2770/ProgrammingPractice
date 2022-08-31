@@ -6,9 +6,10 @@ def setSwitch( anums1:int, anums2:int) -> bool:
     else:
         return True
     
-def merge( nums1, m: int, nums2, n: int) -> None:
+def merge_with_extra_array( nums1, m: int, nums2, n: int):
     """
-    Do not return anything, modify nums1 in-place instead.
+    Create a temporary results-array. Update that while traversing both input-arrays. 
+    later, rename first-input-array to point to temporary result-array. 
     """
     Mhd = 0
     Nhd = 0
@@ -33,11 +34,26 @@ def merge( nums1, m: int, nums2, n: int) -> None:
     print("result", result)
     return result
 
+
+def merge_with_no_extra_array( nums1, m: int, nums2, n: int):
+    """
+    Do not return anything, modify nums1 in-place instead.
+    """
+    
+def merge( nums1, m: int, nums2, n: int) -> None:
+
+    # Implementation-1: with extra memory created
+    nums1 = merge_with_extra_array( nums1, m, nums2, n)
+
+    # Implementation-2: with NO Extra Memory. 
+    merge_with_no_extra_array(nums1, m, nums2, n)
+
+
 if __name__=="__main__":
     nums1 = [1,2,3,0,0,0]
     m = 3
     nums2 = [2,5,6]
     n = 3
 
-    nums1 = merge(nums1, m, nums2, n)
+    merge(nums1, m, nums2, n)
     print("nums1", nums1)
