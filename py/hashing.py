@@ -171,7 +171,7 @@ def update_alphabet(sym, k, alphabet, total_symbols, T_encoder, Tprime_encoder):
     Tprime_encoder[sym] = anum << k
 
 def read_from_files_rolling(file1, file2, k):
-
+    print("read_from_files_rolling: rolling-hash")
     (total_symbols, alphabet) = compute_symbol_alphabet(file1)
 
 
@@ -314,6 +314,7 @@ def experiment_with_files_rolling():
     print("total-unique-keys: %d" % len(segment_dict_2.keys()))
 
     check_diags(result2)
+    return result2
 
 def check_diags(result2):
     isEqual = True
@@ -333,8 +334,10 @@ def check_diags(result2):
 
 # -------------------
 # DEFAULT HASH FUNCTION:
-def read_from_files(file1, file2, k):
 
+
+def read_from_files(file1, file2, k):
+    print("read_from_files: default hash")
     # ======================
     # CONSTURCTING DICTIONARY - FROM FILE-1
     segment_dict = {}
@@ -420,16 +423,126 @@ def experiment_with_files():
     print("total-unique-keys: %d" % len(segment_dict_2.keys()))
 
     check_diags(result2)
+    return result2
+    
+# ==========================
+# DEFAULT HASH - with NODE
+
+
+def read_from_files_defaultHashNode(file1, file2, k):
+    print("read_from_files_defaultHashNode: hash()")
+
+
+    # ======================
+    # CONSTURCTING SYMBOL-ENCODER TABLES - from Alphabet
+
+    T_encoder = {}
+    Tprime_encoder = {}
+
+    # ======================
+    # CONSTURCTING DICTIONARY - FROM STRING-1
+    segment_dict = {}
+    
+    with open(file1, "r") as f:
+        # finding sub-strings 
+        try:
+            start_indx = 0 
+            seg0 = f.read(k)
+            if not seg0:
+                print("ERROR: Cannot read first segment!")
+                raise Exception
+
+            segment0 = DefaultHash(s=seg0)
+            segment_dict[segment0] = 0
+
+            while True:
+                start_indx = start_indx + 1
+                f.seek(start_indx)
+                seg = f.read(k)
+                if not seg:
+                    break
+
+                segment = DefaultHash(s=seg) 
+
+                if segment not in segment_dict.keys(): 
+                    segment_dict[segment] = start_indx
+        except:
+            print("ERROR! Reading file1!")
+            exit(-1)
+
+    # ======================
+    # DETECTING - COMMON SUBSTRINGS
+
+    commons = []
+
+    with open(file2, "r") as f2:
+        # finding sub-strings 
+
+        start_indx = 0 
+        try:
+            seg0 = f2.read(k)
+            if not seg0:
+                print("ERROR: Cannot read first segment!")
+        except:
+            print("ERROR: Reading first segement in file2!")
+            exit(-1)
+
+        segment0 = DefaultHash(s=seg0)
+
+        # detect the segment in dictionary
+        try: 
+            src_indx = segment_dict[segment0]
+            commons.append( (src_indx, start_indx) )
+        except:
+            pass
+
+        while True:
+            start_indx = start_indx + 1
+            f2.seek(start_indx)
+            seg = f2.read(k)
+            if not seg:
+                break
+            # --------------------------
+            segment = DefaultHash(s=seg) 
+            try: 
+                src_indx = segment_dict[segment]
+                commons.append( (src_indx, start_indx) )
+            except:
+                pass
+    
+    return (commons, segment_dict)
+
+def experiment_with_files_defaultHashNode():
+    dir = "/Users/uchiha/Downloads/Fall2022Courses/Sriram_AdvDataStructures/hw1/"
+    dfiles = [ 'war_and_peace_tolstoy.txt', 'hemingway-sun-also-rises.txt', 'anna_karenina_tolstoy.txt', 'bacterial_genome_2.txt', 'hemingway-stories-poems.txt', 'bacterial_genome_1.txt', 'monkeypox-genome.txt', 'hemingway-in-our-time.txt']
+
+    file1 = dir + 'bacterial_genome_2.txt'
+    file2 = dir + 'bacterial_genome_1.txt'
+    k = 20
+    (result2, segment_dict_2) = read_from_files_defaultHashNode(file1, file2, k)
+    print("total-common-patterns: %d" % len(result2))
+    print("total-unique-keys: %d" % len(segment_dict_2.keys()))
+
+    check_diags(result2)
+    return result2
 
 if __name__=="__main__":
 
     #experiment_with_strings():
-    print("---- rollingHash exp: ")
-    experiment_with_files_rolling()
+    
+    #print("---- rollingHash exp: ")
+    #result1 = experiment_with_files_rolling()
+    
     print("---- default exp: ")
-    experiment_with_files()
+    result2 = experiment_with_files()
 
+    print("---- default Hash-Node: ")
+    result3 = experiment_with_files_defaultHashNode()
 
+    assert(len(result3) == len(result2))
+    for x,y in zip(result3, result2):
+        if x!=y:
+            print((x,y))
 
 
 
