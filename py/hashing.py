@@ -1,4 +1,9 @@
 """
+Execution: 
+python ./hashing.py --workspace "<directory with txt files>"
+
+
+
 Implementation of Recursive Hashing by Cyclic Polynomials
 """
 import random
