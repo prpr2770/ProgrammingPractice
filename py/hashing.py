@@ -5,6 +5,8 @@ import random
 import sys
 import numpy as npy
 import itertools
+import pickle 
+import time
 random.seed(0)
 
 ## 4-byte representation of each symbol
@@ -164,15 +166,19 @@ def update_alphabet(sym, k, alphabet, total_symbols, T_encoder, Tprime_encoder):
     alphabet[sym] = 1
     total_symbols = total_symbols + 1
     anum = random.randint(0,2**32) #random.randint(4)
+    """
     # Ensure that the random-int doesn't exist in Table. 
     while( anum in T_encoder.values() ):
         anum = random.randint(0,2**32) #random.randint(4)
+    """
     T_encoder[sym] = anum
     Tprime_encoder[sym] = anum << k
 
 def read_from_files_rolling(file1, file2, k):
     print("read_from_files_rolling: rolling-hash")
-    (total_symbols, alphabet) = compute_symbol_alphabet(file1)
+    total_symbols = 0
+    alphabet = {}
+    #(total_symbols, alphabet) = compute_symbol_alphabet(file1)
 
 
     # ======================
@@ -189,7 +195,7 @@ def read_from_files_rolling(file1, file2, k):
     # ======================
     # CONSTURCTING DICTIONARY - FROM STRING-1
 
-    with open(file1, "r") as f:
+    with open(file1, "rb") as f:
 
         # finding sub-strings 
         try:
@@ -198,6 +204,14 @@ def read_from_files_rolling(file1, file2, k):
             if not seg0:
                 print("ERROR: Cannot read first segment!")
                 raise Exception
+
+
+            # --------------------------
+            # Ensure all symbols exist in vocabulary
+            for sym in seg0:
+                if sym not in T_encoder.keys():
+                    update_alphabet(sym, k, alphabet, total_symbols, T_encoder, Tprime_encoder)
+
             segment0 = SelfAnnihilatingHash(s=seg0, T_encoder=T_encoder, Tprime_encoder=Tprime_encoder)
             old_hashkey = segment0.hash_value
 
@@ -212,6 +226,11 @@ def read_from_files_rolling(file1, file2, k):
                 if not seg:
                     break
                 new_symbol = seg[-1]
+                # --------------------------
+                # Ensure that the new-symbol being added exists in Vocabulary. If not, account for it. 
+                if new_symbol not in T_encoder.keys():
+                    update_alphabet(new_symbol, k, alphabet, total_symbols, T_encoder, Tprime_encoder)
+
                 segment = SelfAnnihilatingHash(s=seg, T_encoder=T_encoder, Tprime_encoder=Tprime_encoder, prev_key=old_hashkey, removed_symbol=old_symbol, introduced_symbol=new_symbol ) 
 
                 if segment not in segment_dict.keys(): 
@@ -228,7 +247,7 @@ def read_from_files_rolling(file1, file2, k):
 
     commons = []
 
-    with open(file2, "r") as f2:
+    with open(file2, "rb") as f2:
         # finding sub-strings 
 
         start_indx = 0 
@@ -268,14 +287,7 @@ def read_from_files_rolling(file1, file2, k):
             # --------------------------
             # Ensure that the new-symbol being added exists in Vocabulary. If not, account for it. 
             if new_symbol not in T_encoder.keys():
-                alphabet[new_symbol] = 1
-                total_symbols = total_symbols + 1
-                anum = random.randint(0,2**32) #random.randint(4)
-                # Ensure that the random-int doesn't exist in Table. 
-                while( anum in T_encoder.values() ):
-                    anum = random.randint(0,2**32) #random.randint(4)
-                T_encoder[new_symbol] = anum
-                Tprime_encoder[new_symbol] = anum << k
+                update_alphabet(new_symbol, k, alphabet, total_symbols, T_encoder, Tprime_encoder)
 
             # --------------------------
             segment = SelfAnnihilatingHash(s=seg, T_encoder=T_encoder, Tprime_encoder=Tprime_encoder, prev_key=old_hashkey, removed_symbol=old_symbol, introduced_symbol=new_symbol ) 
@@ -302,13 +314,7 @@ def experiment_with_strings():
     print(result1)
 
 
-def experiment_with_files_rolling():
-    dir = "/Users/uchiha/Downloads/Fall2022Courses/Sriram_AdvDataStructures/hw1/"
-    dfiles = [ 'war_and_peace_tolstoy.txt', 'hemingway-sun-also-rises.txt', 'anna_karenina_tolstoy.txt', 'bacterial_genome_2.txt', 'hemingway-stories-poems.txt', 'bacterial_genome_1.txt', 'monkeypox-genome.txt', 'hemingway-in-our-time.txt']
-
-    file1 = dir + 'bacterial_genome_2.txt'
-    file2 = dir + 'bacterial_genome_1.txt'
-    k = 20
+def experiment_with_files_rolling(file1, file2, k):
     (result2, segment_dict_2) = read_from_files_rolling(file1, file2, k)
     print("total-common-patterns: %d" % len(result2))
     print("total-unique-keys: %d" % len(segment_dict_2.keys()))
@@ -342,7 +348,7 @@ def read_from_files(file1, file2, k):
     # CONSTURCTING DICTIONARY - FROM FILE-1
     segment_dict = {}
 
-    with open(file1, "r") as f:
+    with open(file1, "rb") as f:
 
         # finding sub-strings 
         try:
@@ -351,31 +357,27 @@ def read_from_files(file1, file2, k):
             if not seg0:
                 print("ERROR: Cannot read first segment!")
                 raise Exception
-
-            segment_dict[seg0] = 0
-            old_symbol = seg0[0]
-            while True:
-                start_indx = start_indx + 1
-                f.seek(start_indx)
-                seg = f.read(k)
-                if not seg:
-                    break
-                new_symbol = seg[-1]
-
-                if seg not in segment_dict.keys(): 
-                    segment_dict[seg] = start_indx
-
-                old_symbol = seg[0]
         except:
             print("ERROR! Reading file1!")
             exit(-1)
+
+        segment_dict[seg0] = 0
+        while True:
+            start_indx = start_indx + 1
+            f.seek(start_indx)
+            seg = f.read(k)
+            if not seg:
+                break
+
+            if seg not in segment_dict.keys(): 
+                segment_dict[seg] = start_indx
 
     # ======================
     # DETECTING - COMMON SUBSTRINGS
 
     commons = []
 
-    with open(file2, "r") as f2:
+    with open(file2, "rb") as f2:
         # finding sub-strings 
 
         start_indx = 0 
@@ -411,13 +413,7 @@ def read_from_files(file1, file2, k):
     return (commons, segment_dict)
 
 
-def experiment_with_files():
-    dir = "/Users/uchiha/Downloads/Fall2022Courses/Sriram_AdvDataStructures/hw1/"
-    dfiles = [ 'war_and_peace_tolstoy.txt', 'hemingway-sun-also-rises.txt', 'anna_karenina_tolstoy.txt', 'bacterial_genome_2.txt', 'hemingway-stories-poems.txt', 'bacterial_genome_1.txt', 'monkeypox-genome.txt', 'hemingway-in-our-time.txt']
-
-    file1 = dir + 'bacterial_genome_2.txt'
-    file2 = dir + 'bacterial_genome_1.txt'
-    k = 20
+def experiment_with_files(file1, file2, k):
     (result2, segment_dict_2) = read_from_files(file1, file2, k)
     print("total-common-patterns: %d" % len(result2))
     print("total-unique-keys: %d" % len(segment_dict_2.keys()))
@@ -431,8 +427,6 @@ def experiment_with_files():
 
 def read_from_files_defaultHashNode(file1, file2, k):
     print("read_from_files_defaultHashNode: hash()")
-
-
     # ======================
     # CONSTURCTING SYMBOL-ENCODER TABLES - from Alphabet
 
@@ -443,7 +437,7 @@ def read_from_files_defaultHashNode(file1, file2, k):
     # CONSTURCTING DICTIONARY - FROM STRING-1
     segment_dict = {}
     
-    with open(file1, "r") as f:
+    with open(file1, "rb") as f:
         # finding sub-strings 
         try:
             start_indx = 0 
@@ -475,7 +469,7 @@ def read_from_files_defaultHashNode(file1, file2, k):
 
     commons = []
 
-    with open(file2, "r") as f2:
+    with open(file2, "rb") as f2:
         # finding sub-strings 
 
         start_indx = 0 
@@ -512,13 +506,8 @@ def read_from_files_defaultHashNode(file1, file2, k):
     
     return (commons, segment_dict)
 
-def experiment_with_files_defaultHashNode():
-    dir = "/Users/uchiha/Downloads/Fall2022Courses/Sriram_AdvDataStructures/hw1/"
-    dfiles = [ 'war_and_peace_tolstoy.txt', 'hemingway-sun-also-rises.txt', 'anna_karenina_tolstoy.txt', 'bacterial_genome_2.txt', 'hemingway-stories-poems.txt', 'bacterial_genome_1.txt', 'monkeypox-genome.txt', 'hemingway-in-our-time.txt']
+def experiment_with_files_defaultHashNode(file1, file2, k):
 
-    file1 = dir + 'bacterial_genome_2.txt'
-    file2 = dir + 'bacterial_genome_1.txt'
-    k = 20
     (result2, segment_dict_2) = read_from_files_defaultHashNode(file1, file2, k)
     print("total-common-patterns: %d" % len(result2))
     print("total-unique-keys: %d" % len(segment_dict_2.keys()))
@@ -530,19 +519,58 @@ if __name__=="__main__":
 
     #experiment_with_strings():
     
-    #print("---- rollingHash exp: ")
-    #result1 = experiment_with_files_rolling()
+    dir = "/Users/uchiha/Downloads/Fall2022Courses/Sriram_AdvDataStructures/hw1/"
+    dfiles = [ 'war_and_peace_tolstoy.txt', 'hemingway-sun-also-rises.txt', 'anna_karenina_tolstoy.txt', 'bacterial_genome_2.txt', 'hemingway-stories-poems.txt', 'bacterial_genome_1.txt', 'monkeypox-genome.txt', 'hemingway-in-our-time.txt']
+
+    file1 = dir + 'bacterial_genome_2.txt'
+    file2 = dir + 'bacterial_genome_1.txt'
     
-    print("---- default exp: ")
-    result2 = experiment_with_files()
+    filepairs = [('war_and_peace_tolstoy.txt','anna_karenina_tolstoy.txt'), ('war_and_peace_tolstoy.txt', 'hemingway-sun-also-rises.txt' ), ('hemingway-sun-also-rises.txt', 'anna_karenina_tolstoy.txt'),('hemingway-stories-poems.txt','hemingway-in-our-time.txt' ),('hemingway-sun-also-rises.txt','hemingway-in-our-time.txt'), ('bacterial_genome_1.txt', 'monkeypox-genome.txt'),  ('bacterial_genome_1.txt', 'bacterial_genome_2.txt'),]
 
-    print("---- default Hash-Node: ")
-    result3 = experiment_with_files_defaultHashNode()
+    dict_all_pairs_results = {}
+    for fp in filepairs:
+        file1 = dir + fp[0]
+        file2 = dir + fp[1]
+        print("file1: %s\nfile2: %s\n"%(file1, file2))
+        results = []
 
-    assert(len(result3) == len(result2))
-    for x,y in zip(result3, result2):
-        if x!=y:
-            print((x,y))
+        for k in range(8, 256, 8):
+            
+            st = time.time()
+            print("---- default exp: ")
+            result2 = experiment_with_files(file1, file2, k)
+            et = time.time()
+            t2 = et - st
+            print("\t\telapsed time: %d" % t2)
+
+
+            st = time.time()
+            print("---- default Hash-Node: ")
+            result3 = experiment_with_files_defaultHashNode(file1, file2, k)
+            et = time.time()
+            t3 = et - st
+            print("\t\telapsed time: %d" % t3)
+
+
+            st = time.time()
+            print("---- rollingHash exp: ")
+            result1 = experiment_with_files_rolling(file1, file2, k)
+            et = time.time()
+            t1 = et - st
+            print("\t\telapsed time: %d" % t1)
+
+            assert(len(result3) == len(result2))
+            for x,y in zip(result3, result2):
+                if x!=y:
+                    print((x,y))
+            
+            results.append( (k, t1, t2, t3) )
+
+
+        dict_all_pairs_results[fp] = results
+
+    with open("exp_hashSegments.pkl", 'wb') as opf:
+        pickle.dump(dict_all_pairs_results, opf)
 
 
 
