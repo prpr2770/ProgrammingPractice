@@ -7,6 +7,7 @@ import numpy as npy
 import itertools
 import pickle 
 import time
+import argparse
 random.seed(0)
 
 ## 4-byte representation of each symbol
@@ -515,16 +516,11 @@ def experiment_with_files_defaultHashNode(file1, file2, k):
     check_diags(result2)
     return result2
 
-if __name__=="__main__":
 
-    #experiment_with_strings():
-    
-    dir = "/Users/uchiha/Downloads/Fall2022Courses/Sriram_AdvDataStructures/hw1/"
+def main(workspace):
+    dir = workspace
     dfiles = [ 'war_and_peace_tolstoy.txt', 'hemingway-sun-also-rises.txt', 'anna_karenina_tolstoy.txt', 'bacterial_genome_2.txt', 'hemingway-stories-poems.txt', 'bacterial_genome_1.txt', 'monkeypox-genome.txt', 'hemingway-in-our-time.txt']
 
-    file1 = dir + 'bacterial_genome_2.txt'
-    file2 = dir + 'bacterial_genome_1.txt'
-    
     filepairs = [('war_and_peace_tolstoy.txt','anna_karenina_tolstoy.txt'), ('war_and_peace_tolstoy.txt', 'hemingway-sun-also-rises.txt' ), ('hemingway-sun-also-rises.txt', 'anna_karenina_tolstoy.txt'),('hemingway-stories-poems.txt','hemingway-in-our-time.txt' ),('hemingway-sun-also-rises.txt','hemingway-in-our-time.txt'), ('bacterial_genome_1.txt', 'monkeypox-genome.txt'),  ('bacterial_genome_1.txt', 'bacterial_genome_2.txt'),]
 
     dict_all_pairs_results = {}
@@ -572,6 +568,19 @@ if __name__=="__main__":
     with open("exp_hashSegments.pkl", 'wb') as opf:
         pickle.dump(dict_all_pairs_results, opf)
 
+
+
+if __name__=="__main__":
+
+    #experiment_with_strings():
+    parser = argparse.ArgumentParser(description='Create a ArcHydro schema')
+    parser.add_argument('--workspace', metavar='path', required=True,
+                        help='the path to workspace')
+    args = parser.parse_args()
+
+    main(workspace=args.workspace)
+
+    dir = "/Users/uchiha/Downloads/Fall2022Courses/Sriram_AdvDataStructures/hw1/"
 
 
 
